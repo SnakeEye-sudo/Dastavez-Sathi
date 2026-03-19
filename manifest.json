@@ -1,0 +1,17 @@
+{
+  "name": "Dastavez Sathi",
+  "short_name": "Dastavez",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#11161d",
+  "theme_color": "#11161d",
+  "description": "Mobile-first document scanner for cleaning captures and exporting multi-page PDFs.",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
