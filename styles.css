@@ -207,6 +207,19 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .preview-empty { color: var(--muted); padding: 20px; text-align: center; }
 .control-grid { gap: 16px; align-items: end; margin-top: 16px; }
 .control-grid > div { flex: 1; }
+.ocr-grid { margin-top: 18px; }
+.ocr-actions {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  justify-content: flex-end;
+}
+.ocr-panel { margin-top: 18px; }
+.ocr-output {
+  min-height: 180px;
+  padding: 14px 16px;
+  resize: vertical;
+}
 .result-panel {
   margin-top: 16px;
   padding: 18px;
@@ -312,8 +325,10 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   .hero, .panel, .drawer-card, .site-footer { border-radius: 26px; }
   .hero-headline { max-width: none; font-size: 2.2rem; }
   .hero-top, .control-grid, .site-footer { flex-direction: column; align-items: stretch; }
+  .ocr-actions { justify-content: stretch; }
   .capture-actions { display: grid; }
   .capture-actions .menu-btn, .menu-links a { width: 100%; }
+  .ocr-actions .menu-btn { width: 100%; }
   .menu-links { grid-template-columns: 1fr; }
   .camera-shell, .preview-shell { min-height: 280px; }
   .page-thumb, .history-item { grid-template-columns: 72px minmax(0, 1fr); }

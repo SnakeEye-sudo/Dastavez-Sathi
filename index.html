@@ -171,6 +171,7 @@
             <div class="capture-actions compact">
               <button class="menu-btn age-btn ghost-btn" id="rotateLeftBtn" type="button">Rotate left</button>
               <button class="menu-btn age-btn ghost-btn" id="rotateRightBtn" type="button">Rotate right</button>
+              <button class="menu-btn age-btn ghost-btn" id="autoCropBtn" type="button">Auto crop page</button>
               <button class="menu-btn age-btn ghost-btn" id="duplicateBtn" type="button">Duplicate</button>
               <button class="menu-btn age-btn danger-btn" id="deleteBtn" type="button">Delete page</button>
             </div>
@@ -190,6 +191,23 @@
               <button class="menu-btn age-btn" id="exportPdfBtn" type="button">Download PDF</button>
               <button class="menu-btn age-btn ghost-btn" id="sharePdfBtn" type="button">Share PDF</button>
               <button class="menu-btn age-btn danger-btn" id="clearStackBtn" type="button">Clear stack</button>
+            </div>
+            <div class="ocr-panel">
+              <div class="control-grid ocr-grid">
+                <div>
+                  <label class="field-label" for="ocrLangSelect">OCR language</label>
+                  <select id="ocrLangSelect" class="text-input">
+                    <option value="eng">English</option>
+                    <option value="eng+hin">English + Hindi</option>
+                  </select>
+                </div>
+                <div class="ocr-actions">
+                  <button class="menu-btn age-btn ghost-btn" id="ocrBtn" type="button">Extract text</button>
+                  <button class="menu-btn age-btn ghost-btn" id="copyOcrBtn" type="button">Copy OCR text</button>
+                </div>
+              </div>
+              <label class="field-label" for="ocrOutput">OCR output</label>
+              <textarea id="ocrOutput" class="text-input ocr-output" rows="8" placeholder="OCR text yahan dikhega..."></textarea>
             </div>
           </article>
         </section>
@@ -242,6 +260,8 @@
   </div>
 
   <script src="app.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="notification-prompt.js"></script>
 </body>
 </html>

@@ -69,11 +69,16 @@
     contrast: document.getElementById("contrastRange") as HTMLInputElement,
     rotateLeft: document.getElementById("rotateLeftBtn") as HTMLButtonElement,
     rotateRight: document.getElementById("rotateRightBtn") as HTMLButtonElement,
+    autoCrop: document.getElementById("autoCropBtn") as HTMLButtonElement,
     duplicate: document.getElementById("duplicateBtn") as HTMLButtonElement,
     remove: document.getElementById("deleteBtn") as HTMLButtonElement,
     exportPdf: document.getElementById("exportPdfBtn") as HTMLButtonElement,
     sharePdf: document.getElementById("sharePdfBtn") as HTMLButtonElement,
     clear: document.getElementById("clearStackBtn") as HTMLButtonElement,
+    ocrLang: document.getElementById("ocrLangSelect") as HTMLSelectElement,
+    ocrBtn: document.getElementById("ocrBtn") as HTMLButtonElement,
+    copyOcrBtn: document.getElementById("copyOcrBtn") as HTMLButtonElement,
+    ocrOutput: document.getElementById("ocrOutput") as HTMLTextAreaElement,
     status: document.getElementById("exportStatus") as HTMLElement,
     docs: document.getElementById("recentDocsList") as HTMLElement,
     profile: document.getElementById("profileCard") as HTMLElement,
@@ -274,6 +279,39 @@
     return Math.max(0, Math.min(255, Math.round(value)));
   }
 
+  async function waitForGlobal<T>(key: string, ready: (value: T) => boolean, timeout = 20000) {
+    const start = Date.now();
+    return new Promise<T>((resolve, reject) => {
+      const tick = () => {
+        const value = (window as unknown as Record<string, T>)[key];
+        if (value && ready(value)) {
+          resolve(value);
+          return;
+        }
+        if (Date.now() - start > timeout) {
+          reject(new Error(`${key} not ready`));
+          return;
+        }
+        setTimeout(tick, 120);
+      };
+      tick();
+    });
+  }
+
+  function orderedCorners(points: Array<{ x: number; y: number }>) {
+    const sum = (point: { x: number; y: number }) => point.x + point.y;
+    const diff = (point: { x: number; y: number }) => point.y - point.x;
+    const tl = points.reduce((best, point) => (sum(point) < sum(best) ? point : best));
+    const br = points.reduce((best, point) => (sum(point) > sum(best) ? point : best));
+    const tr = points.reduce((best, point) => (diff(point) < diff(best) ? point : best));
+    const bl = points.reduce((best, point) => (diff(point) > diff(best) ? point : best));
+    return [tl, tr, br, bl];
+  }
+
+  function distance(a: { x: number; y: number }, b: { x: number; y: number }) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
   async function renderPreview() {
     const page = currentPage();
     if (!page) return;
@@ -286,6 +324,121 @@
     if (!context) return;
     context.clearRect(0, 0, refs.preview.width, refs.preview.height);
     context.drawImage(canvas, 0, 0, refs.preview.width, refs.preview.height);
+  }
+
+  async function autoCropPage() {
+    const page = currentPage();
+    if (!page) {
+      refs.status.textContent = "Select a page before running auto crop.";
+      return;
+    }
+    refs.status.textContent = "Auto edge detection running...";
+    try {
+      const cv = await waitForGlobal<any>("cv", (value) => typeof value.Mat === "function");
+      const image = await img(page.src);
+      const input = document.createElement("canvas");
+      input.width = image.naturalWidth;
+      input.height = image.naturalHeight;
+      const inputContext = input.getContext("2d");
+      if (!inputContext) throw new Error("Input canvas unavailable");
+      inputContext.drawImage(image, 0, 0, input.width, input.height);
+
+      const src = cv.imread(input);
+      const gray = new cv.Mat();
+      const blur = new cv.Mat();
+      const edges = new cv.Mat();
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+      cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+      cv.Canny(blur, edges, 75, 200);
+      cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+      let bestArea = 0;
+      let best: Array<{ x: number; y: number }> | null = null;
+      for (let i = 0; i < contours.size(); i += 1) {
+        const contour = contours.get(i);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(contour, approx, 0.02 * cv.arcLength(contour, true), true);
+        const area = Math.abs(cv.contourArea(contour));
+        if (approx.rows === 4 && area > bestArea) {
+          bestArea = area;
+          best = [];
+          for (let j = 0; j < 4; j += 1) {
+            best.push({ x: approx.data32S[j * 2], y: approx.data32S[j * 2 + 1] });
+          }
+        }
+        contour.delete();
+        approx.delete();
+      }
+
+      if (!best) {
+        src.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+        refs.status.textContent = "Auto crop could not find a clear page edge.";
+        return;
+      }
+
+      const [tl, tr, br, bl] = orderedCorners(best);
+      const maxWidth = Math.max(distance(tl, tr), distance(bl, br), 1);
+      const maxHeight = Math.max(distance(tl, bl), distance(tr, br), 1);
+      const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+      const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxWidth, 0, maxWidth, maxHeight, 0, maxHeight]);
+      const matrix = cv.getPerspectiveTransform(srcTri, dstTri);
+      const output = new cv.Mat();
+      cv.warpPerspective(src, output, matrix, new cv.Size(maxWidth, maxHeight), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+      const view = document.createElement("canvas");
+      cv.imshow(view, output);
+      page.src = view.toDataURL("image/jpeg", 0.96);
+      page.rotation = 0;
+      page.preset = "document";
+      page.brightness = 0;
+      page.contrast = 0;
+
+      src.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+      srcTri.delete(); dstTri.delete(); matrix.delete(); output.delete();
+
+      refs.status.textContent = "Auto crop complete. Perspective corrected.";
+      renderStrip();
+    } catch {
+      refs.status.textContent = "Auto crop engine is still loading. Try again in a moment.";
+    }
+  }
+
+  async function runOcr() {
+    const page = currentPage();
+    if (!page) {
+      refs.status.textContent = "Select a page before extracting text.";
+      return;
+    }
+    refs.status.textContent = "OCR engine loading...";
+    try {
+      const Tesseract = await waitForGlobal<any>("Tesseract", (value) => typeof value.recognize === "function", 25000);
+      const canvas = await processed(page);
+      const language = refs.ocrLang.value || "eng";
+      const result = await Tesseract.recognize(canvas, language, {
+        logger: (event: { status?: string; progress?: number }) => {
+          if (!event.status) return;
+          const progress = event.progress ? ` ${Math.round(event.progress * 100)}%` : "";
+          refs.status.textContent = `${event.status}${progress}`;
+        }
+      });
+      refs.ocrOutput.value = result.data?.text?.trim() || "";
+      refs.status.textContent = refs.ocrOutput.value ? "OCR text ready." : "OCR completed but no readable text was found.";
+      setView("export");
+    } catch {
+      refs.status.textContent = "OCR engine is not ready yet. Try again in a moment.";
+    }
+  }
+
+  async function copyOcrText() {
+    if (!refs.ocrOutput.value.trim()) {
+      refs.status.textContent = "Run OCR first to get text.";
+      return;
+    }
+    await navigator.clipboard.writeText(refs.ocrOutput.value);
+    refs.status.textContent = "OCR text copied.";
   }
 
   function addPage(src: string) {
@@ -538,11 +691,14 @@
     refs.contrast.addEventListener("input", updateCurrent);
     refs.rotateLeft.addEventListener("click", () => rotate(-90));
     refs.rotateRight.addEventListener("click", () => rotate(90));
+    refs.autoCrop.addEventListener("click", () => void autoCropPage());
     refs.duplicate.addEventListener("click", duplicate);
     refs.remove.addEventListener("click", removePage);
     refs.clear.addEventListener("click", clearAll);
     refs.exportPdf.addEventListener("click", () => void exportPdf());
     refs.sharePdf.addEventListener("click", () => void sharePdf());
+    refs.ocrBtn.addEventListener("click", () => void runOcr());
+    refs.copyOcrBtn.addEventListener("click", () => void copyOcrText());
 
     window.addEventListener("beforeinstallprompt", (event) => {
       event.preventDefault();
