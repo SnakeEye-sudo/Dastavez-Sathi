@@ -8,10 +8,11 @@
   "description": "Mobile-first document scanner for cleaning captures and exporting multi-page PDFs.",
   "icons": [
     {
-      "src": "logo.svg",
+      "src": "logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
 }
+
