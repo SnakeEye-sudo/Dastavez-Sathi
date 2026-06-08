@@ -1,477 +1,270 @@
-<!DOCTYPE html>
-<html lang="hi">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#0f0f1a">
-<meta name="description" content="Dastavez Sathi – Document scanner, vault and organizer using camera + canvas">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Dastavez Sathi 📄</title>
-<link rel="manifest" href="manifest.json">
-<style>
-  :root {
-    --bg: #0a0a1a; --surface: #12122a; --surface2: #1e1e40;
-    --border: rgba(99,102,241,0.2); --accent: #6366f1; --accent2: #a5b4fc;
-    --text: #e0e0ff; --muted: #4d4d90;
-    --font: 'Inter', system-ui, -apple-system, sans-serif;
-  }
-  [data-theme="light"] { --bg: #f5f3ff; --surface: #fff; --surface2: #ede9fe; --text: #1e1b4b; --muted: #6d28d9; }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .topbar-brand { display: flex; align-items: center; gap: 10px; }
-  .topbar-title { font-size: 18px; font-weight: 700; }
-  .topbar-sub { font-size: 11px; color: var(--muted); }
-  .icon-btn { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
-  .view { display: none; } .view.active { display: block; }
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: var(--surface); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-around; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 14px; cursor: pointer; border: none; background: none; color: var(--muted); font-family: var(--font); transition: color 0.2s; }
-  .nav-item.active { color: var(--accent); }
-  .nav-item span { font-size: 10px; font-weight: 600; }
-  .nav-item svg { width: 22px; height: 22px; }
-
-  /* SCANNER */
-  .scan-wrap { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-  .scanner-card { background: var(--surface); border: 2px dashed var(--border); border-radius: 22px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-  .scanner-card:hover { border-color: var(--accent); background: var(--surface2); }
-  .scanner-icon { font-size: 52px; margin-bottom: 12px; }
-  .scanner-title { font-size: 16px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; }
-  .scanner-sub { font-size: 13px; color: var(--muted); }
-  .scan-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .scan-btn { padding: 18px 14px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; text-align: center; transition: all 0.2s; font-family: var(--font); }
-  .scan-btn:hover { border-color: var(--accent); background: var(--surface2); }
-  .scan-btn:active { transform: scale(0.97); }
-  .scan-btn-icon { font-size: 32px; margin-bottom: 8px; }
-  .scan-btn-label { font-size: 13px; font-weight: 700; color: var(--accent2); }
-  .scan-btn-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-  /* PREVIEW */
-  .preview-wrap { position: fixed; inset: 0; background: var(--bg); z-index: 300; display: none; flex-direction: column; }
-  .preview-wrap.show { display: flex; }
-  .preview-topbar { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .preview-title { font-size: 15px; font-weight: 700; color: var(--accent2); flex: 1; }
-  .preview-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; }
-  .preview-img { max-width: 100%; max-height: 100%; border-radius: 16px; object-fit: contain; }
-  .preview-tools { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
-  .tools-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-  .tools-row::-webkit-scrollbar { display: none; }
-  .tool-btn { padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--accent2); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: var(--font); flex-shrink: 0; transition: all 0.2s; }
-  .tool-btn:hover { border-color: var(--accent); background: var(--surface); }
-  .save-btn-big { width: 100%; padding: 15px; border-radius: 16px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 800; cursor: pointer; font-family: var(--font); }
-  .form-mini { display: flex; gap: 8px; }
-  .mini-input { flex: 1; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text); font-size: 14px; font-family: var(--font); outline: none; }
-  .mini-input:focus { border-color: var(--accent); }
-  .mini-select { padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; font-family: var(--font); outline: none; cursor: pointer; }
-
-  /* VAULT */
-  .vault-wrap { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .cat-filter { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 4px; }
-  .cat-filter::-webkit-scrollbar { display: none; }
-  .cat-chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: var(--font); flex-shrink: 0; transition: all 0.2s; }
-  .cat-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
-  .doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .doc-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
-  .doc-card:hover { border-color: var(--accent); }
-  .doc-thumb { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .doc-info { padding: 10px 12px; }
-  .doc-name { font-size: 13px; font-weight: 700; color: var(--accent2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .doc-cat-badge { display: inline-block; padding: 2px 8px; border-radius: 8px; background: rgba(99,102,241,0.15); color: var(--accent); font-size: 10px; font-weight: 700; margin-top: 5px; }
-  .empty-vault { text-align: center; padding: 60px 30px; color: var(--muted); }
-  .empty-vault-icon { font-size: 52px; margin-bottom: 12px; display: block; }
-  .del-overlay { position: absolute; top: 8px; right: 8px; background: rgba(239,68,68,0.8); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
-  .doc-card-wrap { position: relative; }
-
-  /* VIEWER */
-  .viewer-wrap { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 400; display: none; flex-direction: column; align-items: center; justify-content: center; }
-  .viewer-wrap.show { display: flex; }
-  .viewer-img { max-width: 95vw; max-height: 80vh; border-radius: 12px; }
-  .viewer-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .viewer-info { position: absolute; bottom: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .viewer-name { font-size: 14px; font-weight: 700; color: white; }
-  .viewer-dl { padding: 8px 14px; border-radius: 12px; border: none; background: var(--accent); color: white; font-size: 13px; font-weight: 700; cursor: pointer; }
-
-  /* CANVAS (hidden) */
-  #processCanvas { display: none; }
-  .section-header { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 0 8px; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11161d">
+  <meta name="description" content="Dastavez Sathi is a mobile-first document scanner for camera capture, cleanup, and PDF export.">
+  <title>Dastavez Sathi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body data-theme="dark">
-<div class="topbar">
-  <div class="topbar-brand">
-    <span style="font-size:22px">📄</span>
-    <div>
-      <div class="topbar-title">Dastavez Sathi</div>
-      <div class="topbar-sub">Scan • Store • Organize</div>
-    </div>
+<body data-theme="ink">
+  <div class="ambient-layer">
+    <div class="ambient-orb orb-a"></div>
+    <div class="ambient-orb orb-b"></div>
+    <div class="ambient-grid"></div>
+    <div class="ambient-noise"></div>
   </div>
-  <button class="icon-btn" id="themeBtn">🌙</button>
-</div>
 
-<div class="main">
-  <!-- SCAN VIEW -->
-  <div class="view active" id="view-scan">
-    <div class="scan-wrap">
-      <div class="scanner-card" onclick="document.getElementById('fileCapture').click()">
-        <div class="scanner-icon">📸</div>
-        <div class="scanner-title">Camera se Scan Karo</div>
-        <div class="scanner-sub">Photo lo aur document save karo</div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-card">
+      <div class="drawer-head">
+        <div>
+          <p class="eyebrow">Quick controls</p>
+          <h2>Dastavez menu</h2>
+        </div>
+        <button class="icon-btn" id="closeDrawerBtn" type="button" aria-label="Close menu">x</button>
       </div>
-      <div class="section-header">Ya alag se choose karo</div>
-      <div class="scan-btns">
-        <div class="scan-btn" onclick="triggerCapture('environment')">
-          <div class="scan-btn-icon">📷</div>
-          <div class="scan-btn-label">Camera</div>
-          <div class="scan-btn-sub">Back camera se scan</div>
-        </div>
-        <div class="scan-btn" onclick="document.getElementById('fileInput').click()">
-          <div class="scan-btn-icon">🖼️</div>
-          <div class="scan-btn-label">Gallery</div>
-          <div class="scan-btn-sub">Existing photo choose karo</div>
-        </div>
-        <div class="scan-btn" onclick="triggerCapture('user')">
-          <div class="scan-btn-icon">🤳</div>
-          <div class="scan-btn-label">Selfie Cam</div>
-          <div class="scan-btn-sub">Front camera use karo</div>
-        </div>
-        <div class="scan-btn" style="border-color:rgba(99,102,241,0.4)">
-          <div class="scan-btn-icon">📊</div>
-          <div class="scan-btn-label" id="vaultCount">Vault</div>
-          <div class="scan-btn-sub">Saved documents</div>
-        </div>
+      <div class="drawer-grid">
+        <section class="menu-panel">
+          <p class="eyebrow">Theme</p>
+          <h3>Scanner mood</h3>
+          <button class="menu-btn" id="themeBtn" type="button">Change theme</button>
+        </section>
+        <section class="menu-panel">
+          <p class="eyebrow">Install</p>
+          <h3>Keep it on your phone</h3>
+          <button class="menu-btn" id="installBtn" type="button">Install app</button>
+        </section>
+        <section class="menu-panel">
+          <p class="eyebrow">Reminder</p>
+          <h3>Scan follow-up nudge</h3>
+          <label class="field-label" for="reminderTime">Daily reminder time</label>
+          <input id="reminderTime" class="text-input" type="time" value="19:30">
+          <button class="menu-btn" id="saveReminderBtn" type="button">Save reminder</button>
+          <p class="muted small-copy" id="reminderStatus"></p>
+        </section>
+        <section class="menu-panel menu-panel-wide">
+          <p class="eyebrow">Family links</p>
+          <h3>Pages and info</h3>
+          <div class="menu-links">
+            <a href="about.html">About</a>
+            <a href="resources.html">Resources</a>
+            <a href="contact.html">Contact</a>
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms.html">Terms</a>
+            <a href="https://snakeeye-sudo.github.io/Aapka-Sathi/">Aapka-Sathi Family</a>
+          </div>
+        </section>
       </div>
-      <div class="section-header">Supported Types</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${['📋 Aadhar','🪪 PAN','🏅 Certificates','📑 Marksheets','🏠 Property Docs','🏥 Medical','📸 Photos','📄 Any Doc'].map(t => `<div style="padding:6px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted)">${t}</div>`).join('')}
-      </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- VAULT VIEW -->
-  <div class="view" id="view-vault">
-    <div class="vault-wrap">
-      <div class="cat-filter" id="vaultFilter"></div>
-      <div class="doc-grid" id="docGrid"></div>
-    </div>
-  </div>
-</div>
-
-<!-- HIDDEN INPUTS -->
-<input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this)">
-<input type="file" id="fileCapture" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
-<canvas id="processCanvas"></canvas>
-
-<!-- PREVIEW OVERLAY -->
-<div class="preview-wrap" id="previewWrap">
-  <div class="preview-topbar">
-    <button class="icon-btn" onclick="closePreview()">←</button>
-    <div class="preview-title">Document Preview</div>
-  </div>
-  <div class="preview-body">
-    <img id="previewImg" class="preview-img" alt="Preview">
-  </div>
-  <div class="preview-tools">
-    <div class="tools-row">
-      <button class="tool-btn" onclick="applyFilter('original')">Original</button>
-      <button class="tool-btn" onclick="applyFilter('bw')">B&W</button>
-      <button class="tool-btn" onclick="applyFilter('enhance')">Enhance</button>
-      <button class="tool-btn" onclick="applyFilter('sharpen')">Sharpen</button>
-      <button class="tool-btn" onclick="applyFilter('crop')">Auto-Crop</button>
-      <button class="tool-btn" onclick="rotateImg()">Rotate</button>
-    </div>
-    <div class="form-mini">
-      <input class="mini-input" id="docName" placeholder="Document naam...">
-      <select class="mini-select" id="docCat">
-        <option value="Identity">🪪 ID</option>
-        <option value="Education">🎓 Edu</option>
-        <option value="Medical">🏥 Medical</option>
-        <option value="Property">🏠 Property</option>
-        <option value="Financial">💰 Finance</option>
-        <option value="Other">📄 Other</option>
-      </select>
-    </div>
-    <button class="save-btn-big" onclick="saveDocument()">💾 Vault mein Save Karo</button>
-  </div>
-</div>
-
-<!-- VIEWER OVERLAY -->
-<div class="viewer-wrap" id="viewerWrap">
-  <button class="viewer-close" onclick="closeViewer()">✕</button>
-  <img id="viewerImg" class="viewer-img" alt="">
-  <div class="viewer-info">
-    <div>
-      <div class="viewer-name" id="viewerName">–</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5)" id="viewerMeta">–</div>
-    </div>
-    <button class="viewer-dl" onclick="downloadDoc()">⬇️ Download</button>
-  </div>
-</div>
-
-<nav class="bottom-nav">
-  <button class="nav-item active" data-view="scan">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M3 9h3M18 9h3M9 3v3M9 18v3M15 3v3M15 18v3"/></svg>
-    <span>Scan</span>
-  </button>
-  <button class="nav-item" data-view="vault">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-    <span>Vault</span>
-  </button>
-</nav>
-
-<script>
-// ====== STATE ======
-let docs = JSON.parse(localStorage.getItem('dastavez-docs') || '[]');
-let currentImg = null; // base64 of current preview
-let currentDataURL = null;
-let rotation = 0;
-let viewerDoc = null;
-
-const CATS = ['All', 'Identity', 'Education', 'Medical', 'Property', 'Financial', 'Other'];
-let filterCat = 'All';
-
-// ====== CAMERA TRIGGER ======
-function triggerCapture(facing) {
-  const inp = document.getElementById('fileCapture');
-  inp.setAttribute('capture', facing === 'user' ? 'user' : 'environment');
-  inp.click();
-}
-
-// ====== FILE HANDLING ======
-function handleFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      currentImg = img;
-      rotation = 0;
-      renderPreview(img);
-      openPreview();
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
-}
-
-function openPreview() {
-  document.getElementById('previewWrap').classList.add('show');
-  document.getElementById('docName').value = '';
-}
-
-function closePreview() {
-  document.getElementById('previewWrap').classList.remove('show');
-  currentImg = null; currentDataURL = null; rotation = 0;
-}
-
-function renderPreview(imgOrDataURL, filter = 'original') {
-  const canvas = document.getElementById('processCanvas');
-  const ctx = canvas.getContext('2d');
-  let img = currentImg;
-  if (!img) return;
-  // Handle rotation
-  const sw = rotation % 180 === 0 ? img.naturalWidth : img.naturalHeight;
-  const sh = rotation % 180 === 0 ? img.naturalHeight : img.naturalWidth;
-  canvas.width = sw; canvas.height = sh;
-  ctx.save();
-  ctx.translate(sw/2, sh/2);
-  ctx.rotate(rotation * Math.PI / 180);
-  ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
-  ctx.restore();
-  // Apply filter
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  if (filter === 'bw') {
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.3 * data[i] + 0.59 * data[i+1] + 0.11 * data[i+2];
-      data[i] = data[i+1] = data[i+2] = gray;
-    }
-    ctx.putImageData(imageData, 0, 0);
-  } else if (filter === 'enhance') {
-    // Increase contrast + brightness
-    for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.4 + 138));
-      data[i+1] = Math.min(255, Math.max(0, (data[i+1] - 128) * 1.4 + 138));
-      data[i+2] = Math.min(255, Math.max(0, (data[i+2] - 128) * 1.4 + 138));
-    }
-    ctx.putImageData(imageData, 0, 0);
-  } else if (filter === 'sharpen') {
-    // Simple sharpen kernel
-    const kernel = [0,-1,0,-1,5,-1,0,-1,0];
-    const tmpData = new Uint8ClampedArray(data);
-    for (let y = 1; y < canvas.height - 1; y++) {
-      for (let x = 1; x < canvas.width - 1; x++) {
-        for (let c = 0; c < 3; c++) {
-          let val = 0;
-          for (let ky = -1; ky <= 1; ky++) {
-            for (let kx = -1; kx <= 1; kx++) {
-              const idx = ((y+ky)*canvas.width + (x+kx)) * 4 + c;
-              val += tmpData[idx] * kernel[(ky+1)*3 + (kx+1)];
-            }
-          }
-          data[(y*canvas.width + x)*4 + c] = Math.min(255, Math.max(0, val));
-        }
-      }
-    }
-    ctx.putImageData(imageData, 0, 0);
-  }
-  currentDataURL = canvas.toDataURL('image/jpeg', 0.88);
-  document.getElementById('previewImg').src = currentDataURL;
-}
-
-function applyFilter(f) {
-  if (f === 'crop') {
-    // Simple auto-crop: just trim whitespace simulation
-    alert('Auto-crop applied! (Document edges detected via canvas)');
-    renderPreview(currentImg, 'enhance');
-  } else {
-    renderPreview(currentImg, f);
-  }
-}
-
-function rotateImg() {
-  rotation = (rotation + 90) % 360;
-  renderPreview(currentImg);
-}
-
-// ====== SAVE DOCUMENT ======
-function saveDocument() {
-  if (!currentDataURL) { alert('Pehle koi document scan karo!'); return; }
-  const name = document.getElementById('docName').value.trim() || `Document_${Date.now()}`;
-  const cat = document.getElementById('docCat').value;
-  const doc = {
-    id: Date.now(),
-    name, cat,
-    data: currentDataURL,
-    date: new Date().toLocaleDateString('hi-IN'),
-    size: Math.round(currentDataURL.length * 0.75 / 1024) + ' KB'
-  };
-  docs.unshift(doc);
-  try {
-    localStorage.setItem('dastavez-docs', JSON.stringify(docs));
-  } catch(e) {
-    // Storage full — remove oldest
-    docs.pop();
-    docs.unshift(doc);
-    docs = docs.slice(0, 30); // keep max 30
-    try { localStorage.setItem('dastavez-docs', JSON.stringify(docs)); } catch {}
-    alert('Storage almost full! Purane documents delete karo.');
-  }
-  closePreview();
-  renderVault();
-  updateVaultCount();
-  // Switch to vault
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelector('[data-view="vault"]').classList.add('active');
-  document.getElementById('view-vault').classList.add('active');
-  setTimeout(() => alert('✅ Document vault mein save ho gaya!'), 100);
-}
-
-// ====== VAULT ======
-function renderVaultFilter() {
-  document.getElementById('vaultFilter').innerHTML = CATS.map(c =>
-    `<button class="cat-chip ${c===filterCat?'active':''}" onclick="setVaultFilter('${c}')">${c}</button>`
-  ).join('');
-}
-
-function setVaultFilter(c) {
-  filterCat = c;
-  renderVaultFilter();
-  renderVault();
-}
-
-function renderVault() {
-  renderVaultFilter();
-  const filtered = filterCat === 'All' ? docs : docs.filter(d => d.cat === filterCat);
-  const el = document.getElementById('docGrid');
-  if (!filtered.length) {
-    el.innerHTML = `<div class="empty-vault" style="grid-column:span 2">
-      <span class="empty-vault-icon">📂</span>
-      <div style="font-size:14px;font-weight:700;color:var(--accent2)">Vault Khaali Hai</div>
-      <div style="font-size:13px;margin-top:6px">Documents scan karo ya gallery se add karo.</div>
-    </div>`;
-    return;
-  }
-  el.innerHTML = filtered.map(d =>
-    `<div class="doc-card-wrap" style="position:relative">
-      <div class="doc-card" onclick="openViewer('${d.id}')">
-        <div style="width:100%;aspect-ratio:3/4;overflow:hidden;border-radius:16px 16px 0 0;background:var(--surface2);display:flex;align-items:center;justify-content:center">
-          <img src="${d.data}" style="width:100%;height:100%;object-fit:cover" alt="${d.name}" loading="lazy">
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="brand-wrap">
+          <img src="logo.png" alt="Dastavez Sathi logo" class="brand-logo">
+          <div>
+            <p class="hero-tag">Pocket scanner</p>
+            <h1>Dastavez Sathi</h1>
+          </div>
         </div>
-        <div class="doc-info">
-          <div class="doc-name">${d.name}</div>
-          <div class="doc-meta">${d.date} • ${d.size}</div>
-          <div class="doc-cat-badge">${d.cat}</div>
+        <button class="hamburger-btn" id="openDrawerBtn" type="button" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <a class="family-chip" href="https://snakeeye-sudo.github.io/Aapka-Sathi/">Aapka-Sathi family ka hissa</a>
+          <h2 class="hero-headline">Phone camera se document scan karo, clean PDF banao, aur Adobe Scan ko replace kar do.</h2>
+          <p class="hero-text">Dastavez Sathi ko mobile app jaisa banaya gaya hai: capture, cleanup, page review, aur export ek focused scanner flow me milte hain.</p>
+          <div class="hero-badges">
+            <span class="hero-badge">Camera to PDF</span>
+            <span class="hero-badge">Receipt cleanup</span>
+            <span class="hero-badge">Multi-page export</span>
+          </div>
+        </section>
+        <aside class="hero-side">
+          <article class="metric-card">
+            <p class="eyebrow">Current pages</p>
+            <strong id="pagesMetricValue">0</strong>
+            <p class="muted">Pages staged in the current scan stack.</p>
+          </article>
+          <article class="metric-card">
+            <p class="eyebrow">Saved exports</p>
+            <strong id="docsMetricValue">0</strong>
+            <p class="muted">Recent PDFs stay in local device history.</p>
+          </article>
+          <article class="metric-card">
+            <p class="eyebrow">Ready mode</p>
+            <strong id="modeMetricValue">document</strong>
+            <p class="muted">Document preset is tuned for paper scans.</p>
+          </article>
+        </aside>
+      </div>
+    </header>
+
+    <main class="app-grid">
+      <section class="panel panel-main">
+        <div class="tabbar" id="viewTabs"></div>
+
+        <section class="tool-view active" id="view-capture">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Capture deck</p>
+                <h3>Photo lo ya gallery se import karo</h3>
+              </div>
+            </div>
+            <input id="fileInput" type="file" accept="image/*" capture="environment" multiple hidden>
+            <div class="capture-actions">
+              <button class="menu-btn age-btn" id="importBtn" type="button">Import images</button>
+              <button class="menu-btn age-btn" id="cameraBtn" type="button">Start camera</button>
+              <button class="menu-btn age-btn ghost-btn" id="stopCameraBtn" type="button">Stop camera</button>
+              <button class="menu-btn age-btn" id="capturePhotoBtn" type="button">Capture photo</button>
+            </div>
+            <div class="camera-shell">
+              <video id="cameraPreview" autoplay muted playsinline></video>
+              <div class="camera-overlay">
+                <div class="scan-frame"></div>
+                <p class="muted" id="cameraState">Start camera to see the live preview here.</p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tool-view" id="view-review">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Review studio</p>
+                <h3>Page clean karo aur rotate adjust karo</h3>
+              </div>
+            </div>
+            <label class="field-label" for="titleInput">Document title</label>
+            <input id="titleInput" class="text-input" type="text">
+            <div class="control-grid">
+              <div>
+                <label class="field-label" for="presetSelect">Preset mode</label>
+                <select id="presetSelect" class="text-input"></select>
+              </div>
+              <div>
+                <label class="field-label" for="brightnessRange">Brightness</label>
+                <input id="brightnessRange" type="range" min="-60" max="60" step="1" value="0">
+              </div>
+              <div>
+                <label class="field-label" for="contrastRange">Contrast</label>
+                <input id="contrastRange" type="range" min="-60" max="60" step="1" value="0">
+              </div>
+            </div>
+            <div class="preview-shell">
+              <canvas id="previewCanvas" hidden></canvas>
+              <div class="preview-empty" id="previewEmpty">Select a page to show the preview.</div>
+            </div>
+            <div class="capture-actions compact">
+              <button class="menu-btn age-btn ghost-btn" id="rotateLeftBtn" type="button">Rotate left</button>
+              <button class="menu-btn age-btn ghost-btn" id="rotateRightBtn" type="button">Rotate right</button>
+              <button class="menu-btn age-btn ghost-btn" id="autoCropBtn" type="button">Auto crop page</button>
+              <button class="menu-btn age-btn ghost-btn" id="duplicateBtn" type="button">Duplicate</button>
+              <button class="menu-btn age-btn danger-btn" id="deleteBtn" type="button">Delete page</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="tool-view" id="view-export">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Export hub</p>
+                <h3>PDF banao aur share karo</h3>
+              </div>
+            </div>
+            <div class="result-panel" id="exportStatus">Your stack is ready when you add pages.</div>
+            <div class="capture-actions compact">
+              <button class="menu-btn age-btn" id="exportPdfBtn" type="button">Download PDF</button>
+              <button class="menu-btn age-btn ghost-btn" id="sharePdfBtn" type="button">Share PDF</button>
+              <button class="menu-btn age-btn danger-btn" id="clearStackBtn" type="button">Clear stack</button>
+            </div>
+            <div class="ocr-panel">
+              <div class="control-grid ocr-grid">
+                <div>
+                  <label class="field-label" for="ocrLangSelect">OCR language</label>
+                  <select id="ocrLangSelect" class="text-input">
+                    <option value="eng">English</option>
+                    <option value="eng+hin">English + Hindi</option>
+                  </select>
+                </div>
+                <div class="ocr-actions">
+                  <button class="menu-btn age-btn ghost-btn" id="ocrBtn" type="button">Extract text</button>
+                  <button class="menu-btn age-btn ghost-btn" id="copyOcrBtn" type="button">Copy OCR text</button>
+                </div>
+              </div>
+              <label class="field-label" for="ocrOutput">OCR output</label>
+              <textarea id="ocrOutput" class="text-input ocr-output" rows="8" placeholder="OCR text yahan dikhega..."></textarea>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <aside class="panel panel-side">
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">Pages</p>
+              <h3>Current stack</h3>
+            </div>
+          </div>
+          <div class="page-strip" id="pageStrip"></div>
+          <div class="empty-card" id="pageStripEmpty">No pages yet. Start from the capture tab.</div>
+        </section>
+
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">Recent PDFs</p>
+              <h3>Local export history</h3>
+            </div>
+          </div>
+          <div class="history-list" id="recentDocsList"></div>
+        </section>
+
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">App status</p>
+              <h3>Scanner profile</h3>
+            </div>
+          </div>
+          <div class="stack-card" id="profileCard"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <img src="logo.png" alt="Dastavez Sathi logo">
+        <div>
+          <strong>Dastavez Sathi</strong>
+          <p>Paper ko pocket-friendly scanner workflow me lane ke liye.</p>
         </div>
       </div>
-      <div class="del-overlay" onclick="deleteDoc('${d.id}')">🗑️</div>
-    </div>`
-  ).join('');
-}
+      <p class="footer-credit">Crafted and developed by <strong>Er. Sangam Krishna</strong>.</p>
+    </footer>
+  </div>
 
-function deleteDoc(id) {
-  if (!confirm('Is document ko delete karna chahte ho?')) return;
-  docs = docs.filter(d => String(d.id) !== String(id));
-  localStorage.setItem('dastavez-docs', JSON.stringify(docs));
-  renderVault();
-  updateVaultCount();
-}
-
-function openViewer(id) {
-  viewerDoc = docs.find(d => String(d.id) === String(id));
-  if (!viewerDoc) return;
-  document.getElementById('viewerImg').src = viewerDoc.data;
-  document.getElementById('viewerName').textContent = viewerDoc.name;
-  document.getElementById('viewerMeta').textContent = `${viewerDoc.cat} • ${viewerDoc.date} • ${viewerDoc.size}`;
-  document.getElementById('viewerWrap').classList.add('show');
-}
-
-function closeViewer() {
-  document.getElementById('viewerWrap').classList.remove('show');
-  viewerDoc = null;
-}
-
-function downloadDoc() {
-  if (!viewerDoc) return;
-  const a = document.createElement('a');
-  a.href = viewerDoc.data;
-  a.download = viewerDoc.name + '.jpg';
-  a.click();
-}
-
-function updateVaultCount() {
-  document.getElementById('vaultCount').textContent = `Vault (${docs.length})`;
-}
-
-// INIT
-renderVault();
-updateVaultCount();
-
-// NAV
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('view-' + item.dataset.view).classList.add('active');
-    if (item.dataset.view === 'vault') renderVault();
-  });
-});
-
-// THEME
-const t0 = localStorage.getItem('dastavez-theme') || 'dark';
-document.body.dataset.theme = t0;
-document.getElementById('themeBtn').textContent = t0 === 'dark' ? '🌙' : '☀️';
-document.getElementById('themeBtn').addEventListener('click', () => {
-  const t = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.body.dataset.theme = t;
-  document.getElementById('themeBtn').textContent = t === 'dark' ? '🌙' : '☀️';
-  localStorage.setItem('dastavez-theme', t);
-});
-</script>
+  <script src="app.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="notification-prompt.js"></script>
+  <script defer src="notification-prompt.js"></script>
 </body>
 </html>
+
+
