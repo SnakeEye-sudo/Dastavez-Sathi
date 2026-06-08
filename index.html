@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11161d">
+  <meta name="description" content="Dastavez Sathi is a mobile-first document scanner for camera capture, cleanup, and PDF export.">
+  <title>Dastavez Sathi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="ink">
+  <div class="ambient-layer">
+    <div class="ambient-orb orb-a"></div>
+    <div class="ambient-orb orb-b"></div>
+    <div class="ambient-grid"></div>
+    <div class="ambient-noise"></div>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-card">
+      <div class="drawer-head">
+        <div>
+          <p class="eyebrow">Quick controls</p>
+          <h2>Dastavez menu</h2>
+        </div>
+        <button class="icon-btn" id="closeDrawerBtn" type="button" aria-label="Close menu">x</button>
+      </div>
+      <div class="drawer-grid">
+        <section class="menu-panel">
+          <p class="eyebrow">Theme</p>
+          <h3>Scanner mood</h3>
+          <button class="menu-btn" id="themeBtn" type="button">Change theme</button>
+        </section>
+        <section class="menu-panel">
+          <p class="eyebrow">Install</p>
+          <h3>Keep it on your phone</h3>
+          <button class="menu-btn" id="installBtn" type="button">Install app</button>
+        </section>
+        <section class="menu-panel">
+          <p class="eyebrow">Reminder</p>
+          <h3>Scan follow-up nudge</h3>
+          <label class="field-label" for="reminderTime">Daily reminder time</label>
+          <input id="reminderTime" class="text-input" type="time" value="19:30">
+          <button class="menu-btn" id="saveReminderBtn" type="button">Save reminder</button>
+          <p class="muted small-copy" id="reminderStatus"></p>
+        </section>
+        <section class="menu-panel menu-panel-wide">
+          <p class="eyebrow">Family links</p>
+          <h3>Pages and info</h3>
+          <div class="menu-links">
+            <a href="about.html">About</a>
+            <a href="resources.html">Resources</a>
+            <a href="contact.html">Contact</a>
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="terms.html">Terms</a>
+            <a href="https://snakeeye-sudo.github.io/Aapka-Sathi/">Aapka-Sathi Family</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </aside>
+
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="brand-wrap">
+          <img src="logo.png" alt="Dastavez Sathi logo" class="brand-logo">
+          <div>
+            <p class="hero-tag">Pocket scanner</p>
+            <h1>Dastavez Sathi</h1>
+          </div>
+        </div>
+        <button class="hamburger-btn" id="openDrawerBtn" type="button" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <a class="family-chip" href="https://snakeeye-sudo.github.io/Aapka-Sathi/">Aapka-Sathi family ka hissa</a>
+          <h2 class="hero-headline">Phone camera se document scan karo, clean PDF banao, aur Adobe Scan ko replace kar do.</h2>
+          <p class="hero-text">Dastavez Sathi ko mobile app jaisa banaya gaya hai: capture, cleanup, page review, aur export ek focused scanner flow me milte hain.</p>
+          <div class="hero-badges">
+            <span class="hero-badge">Camera to PDF</span>
+            <span class="hero-badge">Receipt cleanup</span>
+            <span class="hero-badge">Multi-page export</span>
+          </div>
+        </section>
+        <aside class="hero-side">
+          <article class="metric-card">
+            <p class="eyebrow">Current pages</p>
+            <strong id="pagesMetricValue">0</strong>
+            <p class="muted">Pages staged in the current scan stack.</p>
+          </article>
+          <article class="metric-card">
+            <p class="eyebrow">Saved exports</p>
+            <strong id="docsMetricValue">0</strong>
+            <p class="muted">Recent PDFs stay in local device history.</p>
+          </article>
+          <article class="metric-card">
+            <p class="eyebrow">Ready mode</p>
+            <strong id="modeMetricValue">document</strong>
+            <p class="muted">Document preset is tuned for paper scans.</p>
+          </article>
+        </aside>
+      </div>
+    </header>
+
+    <main class="app-grid">
+      <section class="panel panel-main">
+        <div class="tabbar" id="viewTabs"></div>
+
+        <section class="tool-view active" id="view-capture">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Capture deck</p>
+                <h3>Photo lo ya gallery se import karo</h3>
+              </div>
+            </div>
+            <input id="fileInput" type="file" accept="image/*" capture="environment" multiple hidden>
+            <div class="capture-actions">
+              <button class="menu-btn age-btn" id="importBtn" type="button">Import images</button>
+              <button class="menu-btn age-btn" id="cameraBtn" type="button">Start camera</button>
+              <button class="menu-btn age-btn ghost-btn" id="stopCameraBtn" type="button">Stop camera</button>
+              <button class="menu-btn age-btn" id="capturePhotoBtn" type="button">Capture photo</button>
+            </div>
+            <div class="camera-shell">
+              <video id="cameraPreview" autoplay muted playsinline></video>
+              <div class="camera-overlay">
+                <div class="scan-frame"></div>
+                <p class="muted" id="cameraState">Start camera to see the live preview here.</p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tool-view" id="view-review">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Review studio</p>
+                <h3>Page clean karo aur rotate adjust karo</h3>
+              </div>
+            </div>
+            <label class="field-label" for="titleInput">Document title</label>
+            <input id="titleInput" class="text-input" type="text">
+            <div class="control-grid">
+              <div>
+                <label class="field-label" for="presetSelect">Preset mode</label>
+                <select id="presetSelect" class="text-input"></select>
+              </div>
+              <div>
+                <label class="field-label" for="brightnessRange">Brightness</label>
+                <input id="brightnessRange" type="range" min="-60" max="60" step="1" value="0">
+              </div>
+              <div>
+                <label class="field-label" for="contrastRange">Contrast</label>
+                <input id="contrastRange" type="range" min="-60" max="60" step="1" value="0">
+              </div>
+            </div>
+            <div class="preview-shell">
+              <canvas id="previewCanvas" hidden></canvas>
+              <div class="preview-empty" id="previewEmpty">Select a page to show the preview.</div>
+            </div>
+            <div class="capture-actions compact">
+              <button class="menu-btn age-btn ghost-btn" id="rotateLeftBtn" type="button">Rotate left</button>
+              <button class="menu-btn age-btn ghost-btn" id="rotateRightBtn" type="button">Rotate right</button>
+              <button class="menu-btn age-btn ghost-btn" id="autoCropBtn" type="button">Auto crop page</button>
+              <button class="menu-btn age-btn ghost-btn" id="duplicateBtn" type="button">Duplicate</button>
+              <button class="menu-btn age-btn danger-btn" id="deleteBtn" type="button">Delete page</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="tool-view" id="view-export">
+          <article class="utility-card">
+            <div class="section-head tight">
+              <div>
+                <p class="eyebrow">Export hub</p>
+                <h3>PDF banao aur share karo</h3>
+              </div>
+            </div>
+            <div class="result-panel" id="exportStatus">Your stack is ready when you add pages.</div>
+            <div class="capture-actions compact">
+              <button class="menu-btn age-btn" id="exportPdfBtn" type="button">Download PDF</button>
+              <button class="menu-btn age-btn ghost-btn" id="sharePdfBtn" type="button">Share PDF</button>
+              <button class="menu-btn age-btn danger-btn" id="clearStackBtn" type="button">Clear stack</button>
+            </div>
+            <div class="ocr-panel">
+              <div class="control-grid ocr-grid">
+                <div>
+                  <label class="field-label" for="ocrLangSelect">OCR language</label>
+                  <select id="ocrLangSelect" class="text-input">
+                    <option value="eng">English</option>
+                    <option value="eng+hin">English + Hindi</option>
+                  </select>
+                </div>
+                <div class="ocr-actions">
+                  <button class="menu-btn age-btn ghost-btn" id="ocrBtn" type="button">Extract text</button>
+                  <button class="menu-btn age-btn ghost-btn" id="copyOcrBtn" type="button">Copy OCR text</button>
+                </div>
+              </div>
+              <label class="field-label" for="ocrOutput">OCR output</label>
+              <textarea id="ocrOutput" class="text-input ocr-output" rows="8" placeholder="OCR text yahan dikhega..."></textarea>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <aside class="panel panel-side">
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">Pages</p>
+              <h3>Current stack</h3>
+            </div>
+          </div>
+          <div class="page-strip" id="pageStrip"></div>
+          <div class="empty-card" id="pageStripEmpty">No pages yet. Start from the capture tab.</div>
+        </section>
+
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">Recent PDFs</p>
+              <h3>Local export history</h3>
+            </div>
+          </div>
+          <div class="history-list" id="recentDocsList"></div>
+        </section>
+
+        <section class="side-section">
+          <div class="section-head tight">
+            <div>
+              <p class="eyebrow">App status</p>
+              <h3>Scanner profile</h3>
+            </div>
+          </div>
+          <div class="stack-card" id="profileCard"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <img src="logo.png" alt="Dastavez Sathi logo">
+        <div>
+          <strong>Dastavez Sathi</strong>
+          <p>Paper ko pocket-friendly scanner workflow me lane ke liye.</p>
+        </div>
+      </div>
+      <p class="footer-credit">Crafted and developed by <strong>Er. Sangam Krishna</strong>.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="notification-prompt.js"></script>
+  <script defer src="notification-prompt.js"></script>
+</body>
+</html>
+
+
